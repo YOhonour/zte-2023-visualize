@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title></title>
+</head>
+
+使用方式：（1）文件多选port.txt、flow.txt、reslut.txt文件，先后顺序无关。（2）点击渲染即可
+<br><br>
+（ps: 宽、高分别取：最后传送完成的时间、port带宽）
+<br><br>
+<hr>
+<input type="file" id="files_flow" multiple placeholder="请选择多个文件"/>
+<button id="btn">点击开始渲染</button>
+<br>
+<hr>
+<div id="my_div">
+</div>
+<style>
+    p{
+        
+        margin-top: 5px;
+    }
+    canvas {
+        margin-bottom: 5px;
+    }
+
+    ;
+</style>
+<script>
+    let w_rate = 3;
+    let h_rate = 20;
+    let flow;
+    let port;
+    let result;
+    let last_times;
+    var inputElement1 = document.getElementById("files_flow");
+    inputElement1.addEventListener("change", handleFiles1, false);
+    function updataLast() {
+        last_times = new Array(port.length).fill(0);
+        for (let i = 0; i < result.length; i++) {
+            const element = result[i];
+            if (flow[element[0]] !== undefined &&flow[element[0]].length == 4) {
+                if (last_times[element[1]] < element[2] + flow[element[0]][3]) {
+                    last_times[element[1]] = element[2] + flow[element[0]][3];
+                }
+            } else {
+                console.log(1111);
+            }
+        }
+    }
+    function handleFiles1() {
+        flow = [];
+        port = [];
+        result = [];
+        var up_files = document.getElementById("files_flow").files;
+
+        for (var i = 0; i < up_files.length; i++) {
+            var file_item = up_files[i];
+            var name = file_item.name;//读取选中文件的文件名
+            var size = file_item.size;//读取选中文件的大小
+            console.log("文件名:" + name + "大小：" + size);
+            if (file_item.name == "flow.txt") {
+                var reader = new FileReader();
+                reader.readAsText(file_item);
+                reader.onload = function () {
+                    let lines = this.result.substring(0, this.result.length - 1).split('\n').slice(1);
+                    flow = lines.map(line => {
+                        const elements = line.split(",");
+                        return elements.map(element => parseInt(element));
+                    });
+                };
+            } else if (file_item.name == "port.txt") {
+                var reader2 = new FileReader();
+                reader2.readAsText(file_item);
+                reader2.onload = function () {
+                    let lines = this.result.substring(0, this.result.length - 1).split('\n').slice(1);
+                    port = lines.map(line => {
+                        const elements = line.split(",");
+                        return elements.map(element => parseInt(element));
+                    });
+                };
+            } else if (file_item.name == "result.txt") {
+                var reader3 = new FileReader();
+                reader3.readAsText(file_item);
+                reader3.onload = function () {
+                    let lines = this.result.split('\n').slice(1);
+                    result = lines.map(line => {
+                        const elements = line.split(",");
+                        return elements.map(element => parseInt(element));
+                    });
+                };
+            }
+        }
+        // myFunction();
+    }
+
+    const myButton = document.getElementById('btn');
+    myButton.addEventListener('click', myFunction);
+    function myFunction() {
+        updataLast();
+        var target_div = document.getElementById("my_div");
+        // 循环遍历所有子元素，并将它们从DOM树中删除
+        while (target_div.firstChild) {
+            target_div.removeChild(target_div.firstChild);
+        }
+
+
+        var port_nums = port.length;
+        for (let index = 0; index < port.length; index++) {
+            var p = document.createElement("p");
+            p.innerText = "端口 " + index + ":";
+            target_div.appendChild(p);
+            var new_canvas = document.createElement("canvas");
+            // 设置canvas的属性
+            new_canvas.id = 'canvas' + index;
+            new_canvas.height = port[index][1] / h_rate;
+            new_canvas.width = last_times[index] / w_rate;
+            new_canvas.style.border = 'solid 1px #999';
+            target_div.appendChild(new_canvas);
+            var ctx = new_canvas.getContext("2d");
+            var rectColor = "#4286f4";
+            var widthRatio = 10;
+            var heightRatio = 0.5;
+            ctx.clearRect(0, 0, new_canvas.width, new_canvas.height);
+            // 获取
+            let max_stt = 0;
+            for (var i = 0; i < result.length; i++) {
+                if (max_stt < result[i][2]) {
+                    max_stt = result[i][2];
+                }
+            }
+            console.log(max_stt); // 输出: 6
+            for (var i = 0; i < result.length; i++) {
+                var flow_id = result[i][0];
+                var port_id = result[i][1];
+                if (port_id != index) continue;
+                var flow_start_tp_time = result[i][2];
+                var flow_tp_time = flow[flow_id][3];
+                var flow_bw = flow[flow_id][1];
+                var w = (flow_tp_time / max_stt) * new_canvas.width;
+                var h = (flow_bw / port[port_id][1]) * new_canvas.height;
+                var x = (flow_start_tp_time / max_stt) * new_canvas.width;
+                var y = (flow_id / flow.length) * new_canvas.height;
+                ctx.fillStyle = rectColor;
+                ctx.fillRect(x, y, w, h);
+            }
+        }
+
+    }
+
+
+</script>
+</body>
+
+</html>
